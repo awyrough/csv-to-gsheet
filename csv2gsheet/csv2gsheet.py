@@ -9,6 +9,17 @@ from oauth2client.client import SignedJwtAssertionCredentials
 import gspread
 
 
+def num_to_letter(num):
+    letter = chr(num % 26 - 1 + ord('A'))
+    count = num / 26
+    prepend = chr(count % 26 - 1 + ord('A')) if count else ""
+    return "%s%s" % (prepend, letter)
+
+
+def get_range(col_end, row_end):
+    return "A1:%s%d" % (col_end, row_end)
+
+
 class csv2GSheet():
     """Class wrapper to upload a csv to a google spreadsheet"""
 
@@ -41,13 +52,25 @@ class csv2GSheet():
                 break
         if not wk:
             wk = sh.add_worksheet(title=(wksheet if wksheet else "csv2GSheet"), rows="100", cols="20")
-        i = 1
+        index = 0
+        rows = []
         for row in csv_reader:
-            j = 1
-            for item in row:
-                wk.update_cell(i, j, item)
-                j += 1
-            i += 1
+            rows.append(row)
+            index += 1
+        if not rows:
+            return
+        col_length = len(rows[0])
+        cell_range_label = get_range(num_to_letter(col_length), index)
+        cell_list = wk.range(cell_range_label)
+        i = 0
+        j = 0
+        for c in cell_list:
+            c.value = rows[i][j]
+            j += 1
+            if j % (col_length) == 0:
+                j = 0
+                i += 1
+        wk.update_cells(cell_list)
 
 
 def handleUsageError():
